@@ -1,21 +1,36 @@
+FROM golang:1.23-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache gcc musl-dev sqlite-dev
+
+WORKDIR /build
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build binary with CGO enabled for SQLite
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o jwt_refresher -ldflags="-s -w" .
+
+# Runtime stage
 FROM alpine:latest
 
-# Install ca-certificates and sqlite for runtime
+# Install runtime dependencies
 RUN apk --no-cache add ca-certificates sqlite-libs tzdata
 
-# Set timezone to Asia/Shanghai (optional, adjust as needed)
+# Set timezone
 ENV TZ=Asia/Shanghai
 
 WORKDIR /app
 
-# Copy the precompiled Linux binary
-COPY jwt_refresher /app/jwt_refresher
+# Copy binary from builder stage
+COPY --from=builder /build/jwt_refresher /app/jwt_refresher
 
 # Make binary executable
 RUN chmod +x /app/jwt_refresher
-
-# Copy embedded web files (they're embedded in the binary, but keep structure for reference)
-# The web files are actually embedded via go:embed, so this is just for documentation
 
 # Create data directory
 RUN mkdir -p /app/data
