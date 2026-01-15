@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT Token Refresher</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .status-active { @apply bg-green-100 text-green-800; }
+        .status-warning { @apply bg-yellow-100 text-yellow-800; }
+        .status-error { @apply bg-red-100 text-red-800; }
+        .status-disabled { @apply bg-gray-100 text-gray-800; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow">
+            <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+                <h1 class="text-3xl font-bold text-gray-900">JWT Token Refresher</h1>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+            <!-- View: Project List -->
+            <div id="view-list" class="space-y-6">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-semibold text-gray-900">项目列表</h2>
+                    <button onclick="showCreateForm()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                        新建项目
+                    </button>
+                </div>
+                <div id="projects-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Projects will be loaded here -->
+                </div>
+            </div>
+
+            <!-- View: Create/Edit Form -->
+            <div id="view-form" class="hidden">
+                <div class="bg-white shadow rounded-lg p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 id="form-title" class="text-2xl font-semibold text-gray-900">新建项目</h2>
+                        <button onclick="showList()" class="text-gray-600 hover:text-gray-900">返回</button>
+                    </div>
+                    <form id="project-form" class="space-y-6">
+                        <input type="hidden" id="project-id">
+
+                        <!-- 基本信息 -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-medium text-gray-900">基本信息</h3>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">项目名称 *</label>
+                                <input type="text" id="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">描述</label>
+                                <textarea id="description" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 刷新配置 -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-medium text-gray-900">刷新配置</h3>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">刷新URL *</label>
+                                <input type="url" id="refresh_url" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">请求方法</label>
+                                <select id="refresh_method" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    <option value="POST">POST</option>
+                                    <option value="GET">GET</option>
+                                    <option value="PUT">PUT</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">请求头 (JSON格式)</label>
+                                <textarea id="refresh_headers" rows="3" placeholder='{"Content-Type": "application/json"}' class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">请求体模板 (支持变量: {{.ClientId}}, {{.ClientSecret}}, {{.RefreshToken}})</label>
+                                <textarea id="refresh_body_template" rows="5" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Token提取规则 -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-medium text-gray-900">Token提取规则 (JSONPath)</h3>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Access Token路径 *</label>
+                                <input type="text" id="access_token_path" required placeholder="accessToken" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Refresh Token路径 *</label>
+                                <input type="text" id="refresh_token_path" required placeholder="refreshToken" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">过期时间路径 (秒)</label>
+                                <input type="text" id="expires_in_path" placeholder="expiresIn" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono">
+                            </div>
+                        </div>
+
+                        <!-- 自定义变量 -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-medium text-gray-900">自定义变量</h3>
+                            <p class="text-sm text-gray-500">定义在请求模板中使用的变量 (如 {{.ClientId}}, {{.ClientSecret}} 等)。RefreshToken 会自动添加。</p>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">变量 (JSON格式)</label>
+                                <textarea id="custom_variables" rows="5" placeholder='{"ClientId": "your-client-id", "ClientSecret": "your-client-secret"}' class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">初始 Refresh Token</label>
+                                <textarea id="current_refresh_token" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 font-mono text-sm"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 刷新策略 -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-medium text-gray-900">刷新策略</h3>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">提前刷新时间 (秒)</label>
+                                <input type="number" id="refresh_before_seconds" value="300" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <p class="mt-1 text-sm text-gray-500">在token过期前多少秒开始刷新</p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end space-x-4">
+                            <button type="button" onclick="showList()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                                取消
+                            </button>
+                            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                保存
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- View: Project Detail -->
+            <div id="view-detail" class="hidden">
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h2 id="detail-title" class="text-2xl font-semibold text-gray-900"></h2>
+                        <button onclick="showList()" class="text-gray-600 hover:text-gray-900">返回</button>
+                    </div>
+
+                    <!-- Token信息 -->
+                    <div class="bg-white shadow rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">当前Token</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Access Token</label>
+                                <div class="mt-1 flex">
+                                    <input type="text" id="detail-access-token" readonly class="flex-1 rounded-l-md border-gray-300 bg-gray-50 font-mono text-sm">
+                                    <button onclick="copyToken('access')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-r-md">复制</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Refresh Token</label>
+                                <div class="mt-1 flex">
+                                    <input type="text" id="detail-refresh-token" readonly class="flex-1 rounded-l-md border-gray-300 bg-gray-50 font-mono text-sm">
+                                    <button onclick="copyToken('refresh')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-r-md">复制</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">过期时间</label>
+                                <div id="detail-expires-at" class="mt-1 text-sm text-gray-900"></div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">最后刷新</label>
+                                <div id="detail-last-refresh" class="mt-1 text-sm text-gray-900"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 刷新日志 -->
+                    <div class="bg-white shadow rounded-lg p-6">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">刷新日志</h3>
+                        <div id="logs-container" class="space-y-2">
+                            <!-- Logs will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed bottom-4 right-4 bg-gray-900 text-white px-6 py-3 rounded-lg shadow-lg">
+        <span id="toast-message"></span>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

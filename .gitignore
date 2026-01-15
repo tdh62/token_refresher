@@ -1,0 +1,41 @@
+# Binaries
+*.exe
+*.exe~
+jwt_refresher
+!jwt_refresher/
+
+# Data directory (database and logs)
+data/
+*.db
+*.log
+
+# Configuration files (keep example only)
+config.yaml
+
+# Test files
+*.json
+!go.json
+
+# Go build artifacts
+*.test
+*.out
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+nul
+tmp/
+temp/
+
+# Claude
+.claude/

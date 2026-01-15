@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  jwt_refresher:
+    build: .
+    ports:
+      - "3007:3007"
+    volumes:
+      # Single file mount for config (read-only)
+      - ./config.yaml:/app/config.yaml:ro
+      # Volume mount for data directory (persistent)
+      - jwt_data:/app/data
+    environment:
+      # Optional: Override config with environment variables
+      - USERNAME=${USERNAME:-admin}
+      - PASSWORD=${PASSWORD:-changeme}
+    restart: unless-stopped
+
+volumes:
+  jwt_data:
+    driver: local

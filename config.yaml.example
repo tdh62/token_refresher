@@ -1,0 +1,16 @@
+# JWT Refresher Configuration File
+# Copy this file to config.yaml and customize
+
+# Server port (default: 3007)
+port: 3007
+
+# Data directory for database and logs (default: ./data)
+data_dir: ./data
+
+# Basic Auth credentials (required)
+# IMPORTANT: Change these default values!
+username: admin
+password: changeme
+
+# Log file name (relative to data_dir, default: app.log)
+log_file: app.log
