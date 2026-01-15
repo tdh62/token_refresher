@@ -366,7 +366,29 @@ docker run -d \
   -e PASSWORD=your-secure-password \
   -v jwt_data:/app/data \
   --name jwt_refresher \
-  jwt_refresher:latest
+  YOUR_DOCKERHUB_USERNAME/jwt-refresher:latest
+```
+
+### 从Docker Hub拉取镜像
+
+项目配置了GitHub Actions自动构建，推送到Docker Hub后可以直接拉取使用：
+
+```bash
+# 拉取最新版本
+docker pull YOUR_DOCKERHUB_USERNAME/jwt-refresher:latest
+
+# 拉取指定版本（如果有tag）
+docker pull YOUR_DOCKERHUB_USERNAME/jwt-refresher:v1.0.0
+
+# 运行容器
+docker run -d \
+  -p 3007:3007 \
+  -e USERNAME=admin \
+  -e PASSWORD=your-secure-password \
+  -v jwt_data:/app/data \
+  --restart unless-stopped \
+  --name jwt_refresher \
+  YOUR_DOCKERHUB_USERNAME/jwt-refresher:latest
 ```
 
 ## 从旧版本迁移
