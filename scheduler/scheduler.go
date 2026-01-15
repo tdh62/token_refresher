@@ -10,11 +10,12 @@ import (
 )
 
 type Scheduler struct {
-	db     *database.DB
-	engine *refresher.Engine
-	ticker *time.Ticker
-	stopCh chan struct{}
-	wg     sync.WaitGroup
+	db       *database.DB
+	engine   *refresher.Engine
+	ticker   *time.Ticker
+	stopCh   chan struct{}
+	wg       sync.WaitGroup
+	stopOnce sync.Once
 }
 
 func NewScheduler(db *database.DB, engine *refresher.Engine) *Scheduler {
@@ -51,13 +52,15 @@ func (s *Scheduler) Start() {
 }
 
 func (s *Scheduler) Stop() {
-	log.Println("Stopping scheduler...")
-	if s.ticker != nil {
-		s.ticker.Stop()
-	}
-	close(s.stopCh)
-	s.wg.Wait()
-	log.Println("Scheduler stopped successfully")
+	s.stopOnce.Do(func() {
+		log.Println("Stopping scheduler...")
+		if s.ticker != nil {
+			s.ticker.Stop()
+		}
+		close(s.stopCh)
+		s.wg.Wait()
+		log.Println("Scheduler stopped successfully")
+	})
 }
 
 func (s *Scheduler) checkAndRefresh() {
