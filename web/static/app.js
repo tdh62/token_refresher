@@ -92,7 +92,7 @@ async function showDetail(projectId) {
 
         // 显示日志
         const logsContainer = document.getElementById('logs-container');
-        if (logs.length === 0) {
+        if (!logs || logs.length === 0) {
             logsContainer.innerHTML = '<p class="text-gray-500">暂无刷新日志</p>';
         } else {
             logsContainer.innerHTML = logs.map(log => `
@@ -120,7 +120,7 @@ async function loadProjects() {
         const projects = await fetchAPI('/projects');
         const container = document.getElementById('projects-container');
 
-        if (projects.length === 0) {
+        if (!projects || projects.length === 0) {
             container.innerHTML = '<p class="col-span-full text-center text-gray-500">暂无项目，点击"新建项目"开始</p>';
             return;
         }
