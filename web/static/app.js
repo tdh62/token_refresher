@@ -64,7 +64,7 @@ async function showDetail(projectId) {
     try {
         const project = await fetchAPI(`/projects/${projectId}`);
         const token = await fetchAPI(`/projects/${projectId}/token`);
-        const logs = await fetchAPI(`/projects/${projectId}/logs?limit=20`);
+        const logs = await fetchAPI(`/projects/${projectId}/logs?limit=10`);
 
         document.getElementById('detail-title').textContent = project.name;
         document.getElementById('detail-access-token').value = token.access_token || '(未刷新)';
@@ -90,27 +90,75 @@ async function showDetail(projectId) {
             document.getElementById('detail-last-refresh').textContent = '从未刷新';
         }
 
-        // 显示日志
-        const logsContainer = document.getElementById('logs-container');
-        if (!logs || logs.length === 0) {
-            logsContainer.innerHTML = '<p class="text-gray-500">暂无刷新日志</p>';
-        } else {
-            logsContainer.innerHTML = logs.map(log => `
-                <div class="border-l-4 ${log.status === 'success' ? 'border-green-500' : 'border-red-500'} pl-4 py-2">
-                    <div class="flex justify-between">
-                        <span class="font-medium ${log.status === 'success' ? 'text-green-700' : 'text-red-700'}">
-                            ${log.status === 'success' ? '成功' : '失败'}
-                        </span>
-                        <span class="text-sm text-gray-500">${new Date(log.refresh_at).toLocaleString()}</span>
-                    </div>
-                    ${log.error_message ? `<p class="text-sm text-red-600 mt-1">${log.error_message}</p>` : ''}
-                    ${log.new_token_preview ? `<p class="text-sm text-gray-600 mt-1">新Access Token: ${log.new_token_preview}...</p>` : ''}
-                    ${log.new_refresh_token_preview ? `<p class="text-sm text-gray-600 mt-1">新Refresh Token: ${log.new_refresh_token_preview}...</p>` : ''}
-                </div>
-            `).join('');
-        }
+        // 显示日志（只显示最近10条）
+        renderLogs(logs);
     } catch (error) {
         showToast('加载项目详情失败: ' + error.message, 'error');
+    }
+}
+
+// 渲染日志列表
+function renderLogs(logs) {
+    const logsContainer = document.getElementById('logs-container');
+    if (!logs || logs.length === 0) {
+        logsContainer.innerHTML = '<p class="text-gray-500">暂无刷新日志</p>';
+    } else {
+        const logsHtml = logs.map(log => `
+            <div class="border-l-4 ${log.status === 'success' ? 'border-green-500' : 'border-red-500'} pl-4 py-2 mb-3">
+                <div class="flex justify-between">
+                    <span class="font-medium ${log.status === 'success' ? 'text-green-700' : 'text-red-700'}">
+                        ${log.status === 'success' ? '✓ 成功' : '✗ 失败'}
+                    </span>
+                    <span class="text-sm text-gray-500">${new Date(log.refresh_at).toLocaleString()}</span>
+                </div>
+                ${log.error_message ? `<p class="text-sm text-red-600 mt-1">错误: ${truncate(log.error_message, 100)}</p>` : ''}
+                ${log.new_token_preview ? `<p class="text-sm text-gray-600 mt-1">新Access Token: ${log.new_token_preview}...</p>` : ''}
+            </div>
+        `).join('');
+
+        logsContainer.innerHTML = logsHtml + `
+            <div class="text-center mt-4">
+                <button onclick="loadMoreLogs()" class="px-4 py-2 text-sm text-blue-600 hover:text-blue-800">
+                    加载更多日志 (最多显示50条)
+                </button>
+            </div>
+        `;
+    }
+}
+
+// 加载更多日志
+async function loadMoreLogs() {
+    if (!currentProjectId) return;
+
+    try {
+        const logs = await fetchAPI(`/projects/${currentProjectId}/logs?limit=50`);
+        const logsContainer = document.getElementById('logs-container');
+
+        if (!logs || logs.length === 0) {
+            logsContainer.innerHTML = '<p class="text-gray-500">暂无刷新日志</p>';
+            return;
+        }
+
+        const logsHtml = logs.map(log => `
+            <div class="border-l-4 ${log.status === 'success' ? 'border-green-500' : 'border-red-500'} pl-4 py-2 mb-3">
+                <div class="flex justify-between">
+                    <span class="font-medium ${log.status === 'success' ? 'text-green-700' : 'text-red-700'}">
+                        ${log.status === 'success' ? '✓ 成功' : '✗ 失败'}
+                    </span>
+                    <span class="text-sm text-gray-500">${new Date(log.refresh_at).toLocaleString()}</span>
+                </div>
+                ${log.error_message ? `<p class="text-sm text-red-600 mt-1">错误: ${truncate(log.error_message, 100)}</p>` : ''}
+                ${log.new_token_preview ? `<p class="text-sm text-gray-600 mt-1">新Access Token: ${log.new_token_preview}...</p>` : ''}
+            </div>
+        `).join('');
+
+        logsContainer.innerHTML = logsHtml + `
+            <div class="text-center mt-4">
+                <p class="text-sm text-gray-500">已显示最近 ${logs.length} 条日志</p>
+            </div>
+        `;
+    } catch (error) {
+        showToast('加载日志失败: ' + error.message, 'error');
     }
 }
 

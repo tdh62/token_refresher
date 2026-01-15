@@ -7,6 +7,7 @@ import (
 	"jwt_refresher/api"
 	"jwt_refresher/config"
 	"jwt_refresher/database"
+	"jwt_refresher/logger"
 	"jwt_refresher/refresher"
 	"jwt_refresher/scheduler"
 	"log"
@@ -29,11 +30,13 @@ func main() {
 	}
 	log.Printf("Configuration loaded: Port=%d, DataDir=%s", cfg.Port, cfg.DataDir)
 
-	// Setup logging
-	if err := setupLogging(cfg); err != nil {
+	// Setup logging with rotation
+	rotatingLogger, err := logger.SetupRotatingLogger(cfg.DataDir, cfg.LogFile)
+	if err != nil {
 		log.Fatalf("Failed to setup logging: %v", err)
 	}
-	log.Println("Logging configured successfully")
+	defer rotatingLogger.Close()
+	log.Println("Logging configured successfully (with rotation: 10MB max, 5 backups)")
 
 	// Create data directory if not exists
 	if err := os.MkdirAll(cfg.DataDir, 0755); err != nil {
@@ -87,29 +90,6 @@ func main() {
 	log.Println("Shutting down server...")
 	sched.Stop()
 	log.Println("Server stopped")
-}
-
-// setupLogging configures logging to both stdout and file
-func setupLogging(cfg *config.Config) error {
-	logPath := filepath.Join(cfg.DataDir, cfg.LogFile)
-
-	// Create data directory if not exists
-	if err := os.MkdirAll(cfg.DataDir, 0755); err != nil {
-		return fmt.Errorf("failed to create data directory: %w", err)
-	}
-
-	// Open log file (create or append)
-	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		return fmt.Errorf("failed to open log file: %w", err)
-	}
-
-	// Create multi-writer (stdout + file)
-	multiWriter := io.MultiWriter(os.Stdout, logFile)
-	log.SetOutput(multiWriter)
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-
-	return nil
 }
 
 // migrateDatabase moves existing jwt_refresher.db to data directory
